@@ -16,5 +16,5 @@ select
     equip_name,
     equip_type
 from equipment
-where line_id = L1
+where line_id = 'L1'
 order by equip_id;
