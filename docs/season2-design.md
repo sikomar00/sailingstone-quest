@@ -1,5 +1,5 @@
 # ⛵ SAILINGSTONE QUEST S2 — SHIP IT
-### 풀사이클 개발 학습 게임 설계서 v0.1 · 2026-11-08
+### 풀사이클 개발 학습 게임 설계서 v0.2 · 2026-11-08 (v0.1에 페르소나 리뷰 반영, 부록 A)
 
 > 이 문서의 용도: (1) 학습자가 전체 그림을 이해하는 지도, (2) AI 코딩 도구에 그대로 넘겨 게임을 제작하는 명세.
 > 표기: ✅ 출처로 확인한 사실 · ⚠️ 출처 간 상충 또는 공식 문서 미확인 · 📐 설계 가정·추정치(실측으로 보정할 값)
@@ -10,7 +10,8 @@
 
 - **무엇**: S1(SQL·Python)의 후속작. 가상 고객사 (주)한결정밀의 KPI API와 Text-to-SQL 서비스를 **직접 만들고(Build) → 배포하고(Ship) → 운영(Run)** 하는 터미널 게임. 진짜 도구를 진짜 환경에서 쓰고, 게임은 **시스템 상태를 검사해서 채점**한다.
 - **목표 역량**: "AI-BI × DevOps". 데이터·AI 서비스를 만들고, 운영 가능한 수준으로 배포·관측·복구할 수 있는 사람.
-- **규모** 📐: 16장(0~15장), 미션 204개, 약 295시간. 주 20시간이면 약 15주가 걸리고, S1 완주 1주(W0)가 별도로 필요하다.
+- **규모** 📐: 16장(0~15장), 미션 217개(코어 197 + ➕선택 20), 코어 약 292시간 + 선택 약 33시간.
+- **일정** 📐: 계획은 18주(작업 15주 + 버퍼 3주, 2027-03-21 종료 목표)이고, S1 완주 1주(W0)가 따로 필요하다. S1의 실제 진행 속도(계획 대비 50~63%)를 그대로 적용하면 작업 기간이 24~30주로 늘어나 2027-05-23~07-04에 끝난다. 1·2장 실측 후 다시 계산한다.
 - **최종 산출물**: 공개 리포 `hangyeol-kpi-api`
   - CI 배지, 테스트, 릴리스 v1.0.0
   - 라이브 URL: VPS의 k3s, HTTPS, GitOps
@@ -22,6 +23,7 @@
   1. 채점 방식: S1은 정답 결과와 비교했지만, S2는 **실제 시스템 상태를 검사**한다.
   2. **장애(incident) 미션**: 게임이 일부러 고장을 내고 복구 시간(MTTR)을 잰다.
   3. **AI 사용 정책 태그**(🔒/🤝/🚀)와 **설명 게이트**.
+- **v0.2 변경(페르소나 리뷰 반영, 부록 A)**: 코어/선택 구분과 버퍼 주, 3장에서 첫 배포, 운영 첫날(8장)부터 업타임 감시·백업, OEE·스타 스키마·Metabase(AI-BI 보강), AI 증강 개발 트랙, 스캐폴딩 3단계(풀이 예시 → 빈칸 → 독립), 지연 퀴즈로 기억 유지율 측정.
 - **비용** 📐
   - VPS: 8장부터 월 1~2만 원.
   - AWS: 14장에서 신규 계정 크레딧 범위 안.
@@ -56,6 +58,8 @@
 | SQL 티켓 44개(0~5장 42개 + B-1, B-2) | Text-to-SQL 평가셋 44문항 |
 | `dbgen` 시드 고정(2026년 3분기) | 골든 테스트의 기준값. 4분기 이후 데이터는 날짜 시드 시뮬레이터로 추가하고 3분기 값은 고정 |
 | 6-7 팁에 부트캠프 n8n 과정 언급 | 13장 알림 라우팅의 선택지로 n8n 사용 |
+| S1 계획 대비 진행: 11/8까지 52티켓 완료 계획, 실제로는 4장 진행 중(26~33개, 50~63%) | 버퍼 주 3개와 보수 일정 병기(3.8절). 관측이 하나뿐이라 상한 참고값으로만 사용 |
+| `products.std_shift_qty`(교대당 표준 생산량) 컬럼이 있음 | 제조업 표준 KPI인 OEE의 '성능' 항목을 계산할 수 있음 → 9-B |
 
 ### 1.3 학습 설계 근거
 
@@ -68,6 +72,9 @@
   - 개념 질문 위주로 AI를 쓴 패턴은 65~86%, 코드 생성·디버깅을 맡긴 패턴은 24~39%.
   - 한계: 표본이 작고, 기간이 짧고, 라이브러리가 하나뿐.
   - → **디버깅(장애) 미션은 AI 금지, 개념 질문은 허용**.
+- **풀이 예시 효과**: 초보자는 문제를 바로 푸는 것보다 풀이 예시를 먼저 볼 때 인지 부하가 낮다(Sweller & Cooper 1985). 숙련도가 오르면 예시를 점진적으로 걷어낸다(Renkl & Atkinson 2003). → 스캐폴딩 3단계(3.4절).
+- **교차 연습·자기 설명**: Dunlosky et al.(2013)은 interleaved practice와 self-explanation을 'moderate utility'로 평가했다. → 🔁 연결 미션, 설명 게이트.
+- **체감과 실측의 차이** ✅: METR 무작위 대조 실험(2025-07, 숙련 오픈소스 개발자 16명, 실제 과제 246개)에서 AI를 허용한 과제가 19% 더 오래 걸렸다. 참가자들은 사전에 24% 단축을 예상했고, 끝난 뒤에도 20% 빨라졌다고 믿었다. 한계: 소표본, 숙련자·대형 리포 환경, 2025년 초 도구. → 시간 계측과 확신도 평정(3.7·3.8절).
 
 ---
 
@@ -82,10 +89,11 @@
 | 컨테이너 | 이미지 200MB 이하, non-root, healthcheck, arm64+amd64, CRITICAL 취약점 0 |
 | CI/CD | PR마다 lint·type·test·scan. main 머지 시 자동 배포. 액션은 SHA로 고정 |
 | K8s | Helm 차트, probes·resources·PDB·NetworkPolicy·RBAC, Argo CD 동기화 |
-| 운영 | HTTPS 라이브 URL, 백업·복구 드릴 성공, SLO 대시보드, 알림 실제 발송 |
+| 운영 | HTTPS 라이브 URL, 운영 첫날(8장)부터 업타임 감시와 백업, 복구 드릴 성공, SLO 대시보드, 알림 실제 발송 |
 | 클라우드 | Terraform으로 EKS 생성 → 배포 → 삭제. 과금 리소스 잔여 0을 검증 |
-| AI-BI | dbt KPI 마트와 테스트, Text-to-SQL EX 리포트(모델·비용 비교), 개인정보 차단 |
+| AI-BI | dbt 스타 스키마 마트와 테스트, OEE 지표, Metabase 경영진 대시보드, Text-to-SQL EX 리포트(모델·비용 비교), 개인정보 차단 |
 | 장애 대응 | 장애 미션 MTTR 기록, 포스트모템 3건 |
+| AI 증강 개발 | AI 튜터 모드 설정, 스펙을 먼저 쓰고 AI에 맡긴 구현이 계약 테스트 통과, 위임 미션의 설명 게이트 통과 |
 
 ---
 
@@ -120,6 +128,8 @@ S1 엔딩 이후의 이야기다. 한결정밀 PoC가 본계약으로 이어졌�
    → 카드가 복습 덱에 추가 → 다음 티켓
 ```
 
+- `quest goals`(v0.2): 2절 졸업 기준 12개 영역의 현재 충족 상태를 첫날부터 보여 준다. 완성품 미리보기 대신 목적지를 보여 주는 장치다(부록 A.3의 1번).
+
 ### 3.3 미션은 카드 3장으로 구성
 
 S1의 `tip`을 세 장으로 확장한다. 요청하신 "기본개념 · 용법 · 도메인 지식"이 미션마다 하나씩 붙는 구조다.
@@ -146,6 +156,12 @@ S1의 `tip`을 세 장으로 확장한다. 요청하신 "기본개념 · 용법 
 
 설계 규칙: **보스의 체크는 그 장 모든 산출물 체크의 상위집합이다.** 따라서 승급 시험으로 남은 티켓을 면제받아도 다음 장에 필요한 산출물은 반드시 존재한다. S1의 면제 규칙을 운영 미션에 안전하게 이식하기 위한 조건이다.
 
+**v0.2 추가 표기**
+- 코어 / ➕ 선택: 코어만으로 졸업 기준을 충족하도록 설계한다. 선택 미션은 시간이 남거나 관심이 있을 때 연다. 표시가 없으면 코어다.
+- 🔁 연결 미션: 앞 장 기술을 다시 쓴다(예: 3-13 = 1장 systemd + 3장 API). 주제별 블록 학습 사이의 간격을 줄이는 장치다.
+- 스캐폴딩 3단계: 새 도구의 첫 미션은 `worked`(풀이 예시 따라 하기), 다음은 `completion`(빈칸 채우기), 그다음부터 `independent`(독립 과제)다.
+- 중간 점검(미니보스): 20시간이 넘는 장에는 중간 점검을 하나 지정한다(1-8, 10-7, 11-10). 새 미션을 만드는 것이 아니라 기존 미션에 표시만 한다.
+
 ### 3.5 AI 사용 정책
 
 | 태그 | 의미 | 적용 |
@@ -168,6 +184,11 @@ S1의 `tip`을 세 장으로 확장한다. 요청하신 "기본개념 · 용법 
 
 - AI가 내장된 터미널(Warp 등)을 쓴다면 🔒 미션 동안에는 AI 기능을 끈다.
 
+**AI 증강 개발 트랙(v0.2)**: 바이브코딩 실무에 필요한 'AI에게 일을 맡기고 결과를 검증하는 능력'을 따로 훈련한다.
+- 규칙: 🚀 위임 미션은 **같은 기술을 손으로 1회 이상 해 본 뒤에만** 열린다(1.3절 근거).
+- 검증 수단: 계약 테스트, 변이 테스트(mutmut), CI, 설명 게이트. 하나라도 통과하지 못하면 미션 실패다.
+- 미션: 2-9 AI 튜터 모드 설정 · 3-14 스펙 먼저 위임 · 4-10➕ AI가 쓴 테스트 검증 · 7-11➕ MCP 도구 권한 경계 · 8-16➕ AI PR 리뷰 체크리스트
+
 ### 3.6 보상 규칙 (S1 계승 + 추가)
 
 - **S1에서 그대로**: 원샷 +20%, 힌트 1개당 -20%(최대 -60%), 모범 답안 20% + 복습 목록 추가, 승급 시험으로 남은 티켓 면제(각 50%), 문법·실행 오류는 오답으로 세지 않음.
@@ -175,6 +196,7 @@ S1의 `tip`을 세 장으로 확장한다. 요청하신 "기본개념 · 용법 
   - 장애 미션: 목표 MTTR 안에 복구하면 +30%. 장애 중에는 힌트 비용이 2배.
   - 예측 미션: 예측이 맞으면 +10%.
   - 설명 게이트를 통과해야 XP가 확정된다.
+  - 연속 복습 일수는 주 1회 휴식권을 쓰면 끊기지 않는다(부트캠프 일정 변동 대비, v0.2).
 - **배지**: 🟢 첫 그린 CI · 🔁 reflog 구조대 · 🐳 200MB 다이어트 · 🧱 멀티아키 · 🧪 골든 키퍼(방언 이식을 테스트로 지켜냄) · ☸️ 셀프 힐러 · 🚒 인시던트 커맨더(목표 MTTR 5회 달성) · 🔐 전산팀 통과 · 💸 제로 잔여(AWS 정리 검증) · 📈 DORA 리포터 · 📅 꾸준함(복습 14일 연속) · 🏁 전환 심사 2.
 
 ### 3.7 복습 시스템
@@ -183,12 +205,15 @@ S1의 `tip`을 세 장으로 확장한다. 요청하신 "기본개념 · 용법 
 - `quest review`: 만기 카드 10~15장, 약 15분 📐.
 - 주 1회 **재구성 복습**: 예전 티켓을 빈 샌드박스에서 다시 만든다(예: 빈 폴더에서 Dockerfile 작성).
 - 10장 이후에는 **온콜 주간**(선택)을 쓸 수 있다. `quest oncall start`를 켜 두면 일주일 동안 무작위 시각에 이미 클리어한 장애가 재발한다. 디버깅을 인출 연습시키는 장치다.
+- **지연 확인 퀴즈(v0.2)**: 장을 마치고 2주 뒤 그 장의 핵심 10문항을 다시 푼다. 진행률이 아니라 기억 유지율을 재는 지표다.
+- **확신도 평정(v0.2)**: 퀴즈·예측의 답과 함께 확신도(1~3)를 입력한다. `quest stats`가 '확신했는데 틀린 비율'을 보여 준다. METR 연구(1.3절)처럼 체감과 실측은 다를 수 있기 때문이다.
 
 ### 3.8 계측과 일정 보정 (데이터 기반 운영)
 
 - 미션마다 시작 시각, 첫 check, 완료 시각, 실패 횟수, 힌트 수, AI 태그를 SQLite에 기록한다.
 - `quest stats`로 장별 실측 시간과 예상 시간(`est_min`), 유형별 힌트 사용률, 복습 정답률을 본다. 데이터는 SQL로 직접 조회할 수 있다. 내 학습 데이터를 SQL로 분석하는 것 자체가 S1 역량의 재사용이다.
 - **1장과 2장이 끝나면 전체 일정을 실측치로 다시 계산한다.** 이 문서의 시간은 전부 📐 추정치다.
+- 보정 근거(v0.2): S1은 11/8까지 52티켓 완료가 계획이었지만 실제로는 4장 진행 중(26~33개, 50~63%)이다. 관측이 하나뿐이고 시간 투입 조건도 S2와 다르므로, 보정 계수 1.6~2.0배는 상한 참고값으로만 쓴다. 이 설계서도 v0.1에서 시간 합계를 310h로 잘못 적었다가 294h로 고친 적이 있다. 추정치는 검산하고 실측으로 대체한다.
 
 ### 3.9 플레이 화면 예시
 
@@ -215,8 +240,8 @@ $ quest check
 
 ```mermaid
 flowchart LR
-  S1["S1 완주"] --> C0["0 온보딩"] --> C1["1 Linux·셸·네트워크"] --> C2["2 Git·GitHub"]
-  C2 --> C3["3 HTTP·FastAPI"] --> C4["4 테스트·API 계약"] --> C5["5 Docker"] --> C6["6 Compose·PostgreSQL"]
+  S1["S1 완주"] --> C0["0 온보딩"] --> C1["1 Linux·셸·SSH"] --> C2["2 Git·GitHub"]
+  C2 --> C3["3 HTTP·네트워크·FastAPI"] --> C4["4 테스트·API 계약"] --> C5["5 Docker"] --> C6["6 Compose·PostgreSQL"]
   C6 --> C7["7 AI-BI Text-to-SQL"]
   C6 --> C8["8 CI/CD·첫 배포 v0.1"]
   C7 --> C8
@@ -226,29 +251,35 @@ flowchart LR
   C12 --> C13["13 관측성·SRE"] --> C14["14 AWS·Terraform"] --> C15["15 최종 v1.0"]
 ```
 
-| 장 | 주차 📐 | 주제·도구 | 프로젝트 산출물 | 대표 장애 | 시간 📐 |
+| 장 | 주차 📐 | 주제·도구 | 프로젝트 산출물 | 대표 장애 | 코어 시간 📐 |
 |---|---|---|---|---|---|
 | W0 | 11/9~ | S1 4~7장 완주 | S1 PoC (Text-to-SQL 평가셋의 원천) | — | 15h |
 | 0 | W1 | Homebrew, zsh, SSH, OrbStack/Colima | dotfiles 리포, `quest doctor` 전부 통과 | — | 6h |
-| 1 | W1~2 | Linux, bash, 네트워크, SSH, cron, systemd | 무인 점검 스크립트(cron) | 디스크 100%, 포트 충돌 | 25h |
-| 2 | W2~3 | Git 심화, GitHub(PR, ruleset, gh) | 공개 리포, 보호 규칙, v0.0.1 | reflog 복구, .env 푸시 | 12h |
-| 3 | W3~4 | HTTP, FastAPI, Pydantic, uv | KPI API v0 (S1 SQL 이식) | — | 20h |
-| 4 | W4 | pytest, Postman/Newman, Schemathesis | 골든 테스트, 계약 테스트, v0.2 | git bisect | 15h |
-| 5 | W4~5 | Docker, buildx, hadolint, Trivy | 200MB 이하·non-root·멀티아키 이미지 | 바로 죽는 컨테이너 | 20h |
-| 6 | W5~6 | Compose, PostgreSQL, Alembic, sqlglot | 원커맨드 스택 + Grafana KPI 대시보드 | 커넥션 폭주, 볼륨 삭제 | 20h |
-| 7 | W6~7 | **[AI-BI]** LLM API, 평가, SQL 가드 | `/v1/ask` + EX·비용 리포트 | 프롬프트 인젝션 | 15h |
-| 8 | W7~8 | GitHub Actions, GHCR, VPS, Caddy | **🎯 v0.1 라이브 URL** | 빨간 main, exec format error, 롤백 | 22h |
-| 9 | W8~9 | **[AI-BI]** dbt, 데이터 품질 | KPI 마트, 테스트, docs 사이트 | — | 12h |
-| 10 | W9~10 | Kubernetes(k3d), kubectl, k9s | 전체 스택 매니페스트 | CrashLoop, ImagePull, OOM, Pending | 25h |
-| 11 | W10~11 | Helm, Ingress(Traefik), RBAC, NetworkPolicy, Argo CD | Helm 차트 + GitOps | drift, 잘못된 values | 25h |
-| 12 | W11~12 | VPS k3s, Tailscale, Let's Encrypt, 백업 | **🎯 v0.5 운영 이전** | 노드 디스크 압박 | 18h |
-| 13 | W12~13 | Prometheus, Grafana, Loki, Alertmanager, SLO | SLO 대시보드 + 알림 | 지연 급증, 카디널리티 폭발 | 22h |
-| 14 | W13~14 | AWS(IAM, VPC, ECR, EKS), Terraform, OIDC | DR 리허설 + 잔여 0 | 콘솔 수정 drift | 22h |
-| 15 | W14~15 | 문서화, Game Day, DORA | **🎯 v1.0.0 + 포트폴리오** | 무작위 3건 | 15h |
+| 1 | W1~2 | Linux, bash, SSH, cron, systemd | 무인 점검 스크립트(cron) | 디스크 100%, 포트 충돌 | 22h |
+| 2 | W2 | Git 심화, GitHub(PR, ruleset, Projects, gh) | 공개 리포, 보호 규칙, AI 튜터 모드, v0.0.1 | reflog 복구, .env 푸시 | 12h |
+| 3 | W3~4 | 네트워크 기초, HTTP, FastAPI, Pydantic, uv | KPI API v0 + hg-edge-01 첫 배포 | — | 24h |
+| 4 | W4 | pytest, Postman/Newman | 골든 테스트, 계약 테스트, v0.2 | git bisect | 13.5h |
+| 🛟 | W5 | 버퍼 1 | 밀린 미션·복습·부트캠프 일정 흡수 | — | — |
+| 5 | W6 | Docker, buildx, hadolint, Trivy | 200MB 이하·non-root·멀티아키 이미지 | 바로 죽는 컨테이너 | 20h |
+| 6 | W7 | Compose, PostgreSQL, Alembic, sqlglot | 원커맨드 스택 + Grafana KPI 대시보드 | 볼륨 삭제 | 17.5h |
+| 7 | W7~8 | **[AI-BI]** LLM API, 평가, SQL 가드 | `/v1/ask` + EX·비용 리포트 | 프롬프트 인젝션 | 15h |
+| 8 | W8~9 | GitHub Actions, GHCR, VPS(cloud-init), Caddy | **🎯 v0.1 라이브 URL** + 업타임 감시·백업 | 빨간 main, exec format error, 롤백 | 24h |
+| 9 | W9~10 | **[AI-BI]** dbt, 스타 스키마, OEE, Metabase | KPI 마트·테스트·경영진 대시보드 | — | 14h |
+| 10 | W10~11 | Kubernetes(k3d), kubectl, k9s | 전체 스택 매니페스트 | CrashLoop, ImagePull, OOM, Pending | 25h |
+| 11 | W11~12 | Helm, Ingress(Traefik), RBAC, NetworkPolicy, Argo CD | Helm 차트 + GitOps | drift, 잘못된 values | 24h |
+| 12 | W12~13 | VPS k3s, Tailscale, Let's Encrypt, 백업 | **🎯 v0.5 운영 이전** | 노드 디스크 압박 | 18h |
+| 🛟 | W14 | 버퍼 2 | 〃 | — | — |
+| 13 | W15 | Prometheus, Grafana, Loki, Alertmanager, SLO | SLO 대시보드 + 알림 | 지연 급증 | 19.5h |
+| 14 | W16 | AWS(IAM, VPC, ECR, EKS), Terraform, OIDC | DR 리허설 + 잔여 0 | 콘솔 수정 drift | 21h |
+| 🛟 | W17 | 버퍼 3 | Game Day 전 정리 | — | — |
+| 15 | W18 | 문서화, Game Day, DORA, 면접 드릴 | **🎯 v1.0.0 + 포트폴리오** | 무작위 3건 | 16.5h |
 
-합계 294시간(W0 제외) 📐. 주 20시간 기준으로 누적 시간을 주차에 나눈 값이며, 연말연시와 설 연휴는 반영하지 않았다. 1·2장 실측 후 재계산한다.
+- 코어 합계 292시간(W0 제외), 선택 미션 약 33시간 별도 📐.
+- 주 20시간 기준으로 누적 시간을 주차에 나누고 버퍼 주 3개를 넣었다. 연말연시와 설 연휴는 반영하지 않았다.
+- 마일스톤 예상 시기: v0.1은 W9(2027-01-11 주), v0.5는 W13(2027-02-08 주), v1.0은 W18(2027-03-15 주).
+- S1 실적 비율(1.6~2.0배)을 적용한 보수 일정에서는 작업 기간이 24~30주다. 1·2장 실측 후 재계산한다.
 
-미션 표기: 🎫 티켓 · 🧠 퀴즈 · 🔮 예측 · ⌨️ 드릴 · 🚨 장애 · 🏁 시험·보스. 🎫는 기본이 🤝이고, 🚀인 미션만 따로 표시한다.
+미션 표기: 🎫 티켓 · 🧠 퀴즈 · 🔮 예측 · ⌨️ 드릴 · 🚨 장애 · 🏁 시험·보스. 🎫는 기본이 🤝이고, 🚀인 미션만 따로 표시한다. ➕는 선택 미션(표시가 없으면 코어), 🔁는 앞 장 기술을 다시 쓰는 연결 미션, (중간 점검)은 미니보스다.
 
 ---
 
@@ -266,7 +297,7 @@ flowchart LR
   - 0-6 🔮 맥의 `uname -m` vs 컨테이너 안의 `uname -m`
   - 0-7 🧠 장 퀴즈
 
-### 1장. Linux·셸·네트워크: 공장 서버 hg-edge-01 — 강태오·한상철 · 📐25h · 🎯 무인 점검 스크립트와 서비스 유닛
+### 1장. Linux·셸·SSH: 공장 서버 hg-edge-01 — 강태오·한상철 · 📐22h · 🎯 무인 점검 스크립트와 서비스 유닛
 
 - **랩**: Ubuntu 24.04 VM. 기본은 OrbStack Linux machine(예: `orb create ubuntu hg-edge-01`), 대안은 Lima나 Multipass. 게임은 SSH 별칭으로 접속해서 검사하고, cloud-init으로 공장 로그·사용자·문제 상황을 미리 심어 둔다. 맥 터미널의 BSD 도구와 GNU 도구는 옵션이 달라서(예: `sed -i`) Linux 실습은 VM에서만 한다.
 - **개념**
@@ -275,12 +306,11 @@ flowchart LR
   - 프로세스: PID, 시그널(SIGTERM vs SIGKILL), 포그라운드/백그라운드
   - 입출력과 셸: stdin/stdout/stderr, 파이프, 리다이렉션, 종료 코드, 환경변수, 셸 스크립트
   - 서비스 운영: cron, systemd·journald, apt
-  - 네트워크: IP, 포트, DNS, TCP, localhost와 0.0.0.0의 차이
   - SSH: 키, config, 포트 포워딩
 - **용법**
   - 탐색·텍스트 처리: `ls -la` `find` `grep -E` `awk` `sed` `sort | uniq -c | sort -nr` `tail -f` `xargs` `jq`
   - 권한·프로세스·자원: `chmod` `chown` `ps aux` `kill` `ss -tulpn` `lsof -i` `df -h` `du -sh` `free -h`
-  - 서비스·네트워크: `systemctl` `journalctl -u -f` `crontab -e` `curl -v` `dig` `ssh -L` `rsync`
+  - 서비스·원격: `systemctl` `journalctl -u -f` `crontab -e` `ssh -L` `rsync`
 - **도메인**: 엣지 서버 운영(야간 교대 중 장애 대응 절차), 로그 보존과 로테이션, 서버 시간대(UTC vs KST)와 교대 경계, 최소권한 계정, "서버는 애완동물이 아니라 가축"
 - **미션**
   - 1-1 🎫 첫 접속(호스트·OS·커널 확인)
@@ -290,21 +320,20 @@ flowchart LR
   - 1-5 🎫 실행되지 않는 스크립트(권한)
   - 1-6 🎫 운영자 계정과 최소 sudo
   - 1-7 🎫 폭주 프로세스 정상 종료
-  - 1-8 🎫 일일 로그 요약 스크립트(`set -euo pipefail`, 종료 코드)
+  - 1-8 🎫 일일 로그 요약 스크립트(`set -euo pipefail`, 종료 코드) (중간 점검)
   - 1-9 🎫 cron 등록(PATH·TZ 함정)
   - 1-10 🎫 systemd 서비스와 journalctl
-  - 1-11 🔮 0.0.0.0과 127.0.0.1
-  - 1-12 🎫 curl -v와 dig로 요청 해부
-  - 1-13 🎫 SSH config와 포트 포워딩
+  - 1-11 🎫 SSH config와 포트 포워딩(8장 VPS 접속에 필요)
   - 1-I1 🚨 디스크 100%(야간조 로그 폭주)
   - 1-I2 🚨 포트 충돌로 서비스 기동 실패
   - 1-B 🏁 무인 점검 스크립트: 디스크·메모리·서비스 → JSON 리포트 → cron
 - **함정**: cron 환경의 PATH, `>`와 `>>`, `kill -9` 남용, `chmod 777`
-- **사이드 퀘스트**: OverTheWire Bandit 0→15, SadServers 입문 시나리오, explainshell.com
+- **사이드 퀘스트(➕)**: OverTheWire Bandit 0→15, SadServers 입문 시나리오, explainshell.com
+- **v0.2 변경**: 네트워크 기초(0.0.0.0과 127.0.0.1, curl -v, dig)는 처음 쓰는 3장으로 옮겼다. 쓰기 직전에 배워야 기억에 남고, 1장 부담도 25시간에서 22시간으로 준다.
 
 ### 2장. Git 심화·GitHub 협업 — 윤서진 + 리뷰봇 · 📐12h · 🎯 `hangyeol-kpi-api` 공개 리포(보호 규칙·템플릿·v0.0.1)
 
-- **배치고사 2-0**을 통과하면 2-1·2-3·2-6이 면제된다(브랜치·머지·충돌 경험 반영).
+- **배치고사 2-0**을 통과하면 2-1·2-3이 면제된다(브랜치·머지·충돌 경험 반영). 2-6은 선택 미션이다.
 - **개념**: 스냅샷과 커밋 그래프, HEAD와 refs, 스테이징, merge vs rebase, 원격 추적 브랜치, reflog, 태그와 SemVer, PR·리뷰·rulesets·CODEOWNERS, GitHub Flow
 - **용법**: `git log --graph --oneline --all`, `git add -p`, `git rebase -i`, `git commit --amend`, `git cherry-pick`, `git reflog`, `git revert`, `git tag -a`, `gh repo create`, `gh pr create/checks/merge`, `gh issue create`
 - **도메인**: Conventional Commits와 변경 이력 자동화, PR 크기와 리뷰 품질의 관계, 시크릿 유출 시 1순위는 키 폐기(히스토리 삭제는 그다음), SemVer
@@ -314,24 +343,26 @@ flowchart LR
   - 2-1 🔮 HEAD는 어디를 가리키나
   - 2-2 🎫 프로젝트 리포 생성(README·.gitignore·LICENSE·가상 설정 고지)
   - 2-3 🎫 Conventional Commits와 커밋 쪼개기
-  - 2-4 🎫 Issue → 브랜치 → PR → 리뷰봇 지적 반영 → 머지
+  - 2-4 🎫 요구사항 티켓 → Issue 분해 → Projects 보드 → 브랜치 → PR → 리뷰봇 지적 반영 → 머지(기획 단계 포함)
   - 2-5 🎫 main 보호(ruleset)
-  - 2-6 🎫 rebase -i로 커밋 정리
+  - 2-6 ➕🎫 rebase -i로 커밋 정리
   - 2-7 🎫 태그·릴리스 v0.0.1
-  - 2-8 🎫 pre-commit + gitleaks
+  - 2-8 🎫 pre-commit + gitleaks + GitHub secret scanning·push protection 설정 확인
+  - 2-9 🎫 AI 튜터 모드 설정(CLAUDE.md/AGENTS.md, 3.5절). 이후 모든 장의 AI 사용 기준이 된다
   - 2-I1 🚨 reset 사고 → reflog 복구
   - 2-I2 🚨 .env 푸시 사고(키 폐기 → `git filter-repo` → 재발 방지)
   - 2-B 🏁 충돌하는 PR 2개 정리 후 순차 머지
 - **사이드 퀘스트**: Learn Git Branching(main·remote 코스)
 
-### 3장. HTTP·FastAPI: KPI API v0 — 윤서진·오정민·박정훈 · 📐20h · 🎯 KPI API v0 (SQLite 읽기 전용)
+### 3장. HTTP·네트워크·FastAPI: KPI API v0 — 윤서진·오정민·박정훈·강태오 · 📐24h · 🎯 KPI API v0(SQLite 읽기 전용) + hg-edge-01 첫 배포
 
 - **개념**
+  - 네트워크(1장에서 이동): IP, 포트, DNS, TCP, localhost와 0.0.0.0의 차이
   - HTTP: 요청/응답 구조, 메서드의 안전성과 멱등성, 상태 코드, 헤더, JSON
   - API 설계: REST 자원 설계, path vs query, 페이지네이션, 버전(`/v1`), OpenAPI
   - FastAPI: ASGI와 uvicorn, Pydantic v2, 검증과 422, response_model, 의존성 주입, 라우터
   - 그 밖: 설정(pydantic-settings), async와 이벤트 루프 블로킹, CORS
-- **용법**: `uv init`, `uv add fastapi uvicorn`, `uv run uvicorn app.main:app --reload`, `curl -i`, `xh`, `/docs`, `/openapi.json`
+- **용법**: `curl -v`, `curl -i`, `dig`, `uv init`, `uv add fastapi uvicorn`, `uv run uvicorn app.main:app --reload`, `xh`, `/docs`, `/openapi.json`, `systemctl`(3-13)
 - **도메인**: KPI 정의서는 API 계약이다(지표 정의가 바뀌면 버전이 바뀐다). 응답에 단위와 기준을 명시한다(%, 소수 둘째 자리, 월 경계는 KST). 고객사 요청을 엔드포인트로 번역하는 연습.
 - **엔드포인트**
   - `GET /health`
@@ -341,21 +372,23 @@ flowchart LR
   - `GET /v1/kpi/otd?month=` (S1 납기준수율)
   - `GET /v1/equipment/{id}/vibration-alerts?ratio=` (S1 6-7)
 - **미션**
-  - 3-1 🔮 curl -v 출력 읽기
-  - 3-2 🧠 상황별 상태 코드
-  - 3-3 🎫 uv 프로젝트와 /health
-  - 3-4 🎫 path·query 파라미터(404 포함)
-  - 3-5 🎫 Pydantic 모델과 422
-  - 3-6 🎫 가동률 API(B-1 이식)
-  - 3-7 🎫 종합 KPI와 납기준수율
-  - 3-8 🎫 의존성 주입(DB·설정)
-  - 3-9 🎫 SQL 인젝션 방어(f-string 함정 → 파라미터 바인딩, S1 6-6 팁 연결)
-  - 3-10 🎫 설정은 환경변수로
-  - 3-11 🔮 async 안의 블로킹 호출
-  - 3-12 🎫🚀 OpenAPI 설명·예시 보강
+  - 3-1 🔮 0.0.0.0과 127.0.0.1(1장에서 이동)
+  - 3-2 🎫 curl -v·dig로 요청 해부(1장에서 이동, v0.1의 3-1과 통합)
+  - 3-3 🧠 상황별 상태 코드
+  - 3-4 🎫 uv 프로젝트와 /health(풀이 예시형)
+  - 3-5 🎫 path·query 파라미터(404 포함)
+  - 3-6 🎫 Pydantic 모델과 422
+  - 3-7 🎫 가동률 API(B-1 이식)
+  - 3-8 🎫 종합 KPI와 납기준수율
+  - 3-9 🎫 의존성 주입(DB·설정)
+  - 3-10 🎫 SQL 인젝션 방어(f-string 함정 → 파라미터 바인딩, S1 6-6 팁 연결)
+  - 3-11 🎫 설정은 환경변수로 + 구조화 로그(request_id)
+  - 3-12 🔮 async 안의 블로킹 호출
+  - 3-13 🎫🔁 hg-edge-01에 systemd 서비스로 배포(1장 연결, 첫 배포)
+  - 3-14 🎫🚀 스펙 먼저: OpenAPI 스펙 작성 → AI 구현 → 계약 테스트로 검증(3-5~3-8을 손으로 한 뒤에 열림)
   - 3-B 🏁 진동 이상 알림 API(에러 처리·문서 포함)
 
-### 4장. 테스트·API 계약 — 민하늘 · 📐15h · 🎯 v0.2.0 (pytest·골든·Postman/Newman·Schemathesis)
+### 4장. 테스트·API 계약 — 민하늘 · 📐13.5h · 🎯 v0.2.0 (pytest·골든·Postman/Newman)
 
 - **개념**
   - 테스트 일반: 테스트 피라미드, 단위/통합/E2E, 픽스처, parametrize, 골든 테스트, 커버리지의 의미와 한계, 계약 테스트, 속성 기반 테스트(퍼징), 회귀
@@ -375,7 +408,8 @@ flowchart LR
   - 4-6 🎫 Postman 컬렉션과 환경변수
   - 4-7 🎫 테스트 스크립트와 체이닝
   - 4-8 🎫 Newman CLI와 JSON 리포트
-  - 4-9 🎫 Schemathesis로 500 찾기
+  - 4-9 ➕🎫 Schemathesis로 500 찾기
+  - 4-10 ➕🎫🚀 AI가 쓴 테스트 검증: mutmut 변이 테스트로 '버그를 잡는 테스트'인지 측정
   - 4-I1 🚨 언제부터 숫자가 틀렸나(`git bisect run pytest`)
   - 4-B 🏁 계약 테스트 스위트 + v0.2.0
 
@@ -396,9 +430,9 @@ flowchart LR
 - **미션**
   - 5-1 🔮 명령이 끝나면 컨테이너는 어떻게 되나
   - 5-2 🎫 nginx와 포트 매핑
-  - 5-3 🎫 exec·logs·inspect
+  - 5-3 🎫🔁 exec·logs·inspect(컨테이너 안에서 1장의 ps·grep 사용)
   - 5-4 🔮 컨테이너를 지우면 데이터는
-  - 5-5 🎫 첫 Dockerfile(KPI API)
+  - 5-5 🎫 첫 Dockerfile(KPI API, 빈칸 채우기형)
   - 5-6 🎫 레이어 캐시 순서
   - 5-7 🎫 .dockerignore(이미지에 .env 없음)
   - 5-8 🎫 이미지 다이어트 200MB 이하
@@ -408,7 +442,7 @@ flowchart LR
   - 5-I1 🚨 바로 죽는 컨테이너(127.0.0.1 바인딩)
   - 5-B 🏁 프로덕션급 이미지 기준 충족
 
-### 6장. Compose·PostgreSQL (데이터 계층) — 강태오·윤서진·서지훈 · 📐20h · 🎯 `docker compose up` 원커맨드 스택 + Grafana KPI 대시보드 v1
+### 6장. Compose·PostgreSQL (데이터 계층) — 강태오·윤서진·서지훈 · 📐17.5h · 🎯 `docker compose up` 원커맨드 스택 + Grafana KPI 대시보드 v1
 
 - **개념**
   - Compose: 멀티 컨테이너 앱, 서비스 DNS, depends_on과 healthcheck 조건, named volume, env_file, profiles, compose watch
@@ -425,11 +459,11 @@ flowchart LR
   - 6-5 🎫 SQL 방언 이식(골든 테스트로 검증)
   - 6-6 🎫 Alembic
   - 6-7 🎫 인덱스와 EXPLAIN으로 느린 쿼리 개선
-  - 6-8 🎫 읽기 전용 role과 컬럼 권한(개인정보)
+  - 6-8 🎫 읽기 전용 role과 컬럼 권한(작업자 이름은 개인정보보호법상 개인정보)
   - 6-9 🎫 .env 분리와 .env.example
-  - 6-10 🎫 백업·복구 드릴
-  - 6-11 🎫 compose watch 개발 루프
-  - 6-I1 🚨 too many connections
+  - 6-10 🎫🔁 백업·복구 드릴(1장 셸 스크립트 재사용)
+  - 6-11 ➕🎫 compose watch 개발 루프
+  - 6-I1 ➕🚨 too many connections
   - 6-I2 🚨 `down -v`로 데이터 증발 → 백업으로 복원
   - 6-B 🏁 원커맨드 스택 + Grafana KPI 대시보드(as code)
 
@@ -449,7 +483,7 @@ flowchart LR
   - 고정 접두부(스키마 + 정의서 + few-shot)에 `cache_control`을 건다. 이 모델들의 최소 캐시 길이는 512토큰이다.
   - 야간 평가는 Batch API로 돌린다(비용 50%).
   - **모델을 바꿀지는 학습자가 7-8의 측정 결과로 결정한다.**
-- **도메인**: 셀프서비스 분석, 지표 정의(시맨틱 레이어)가 환각을 줄인다, 경영 보고에는 사람 검토 단계를 둔다, 설명 가능성(SQL과 근거를 함께 표시), 데이터 거버넌스(개인정보·권한)
+- **도메인**: 셀프서비스 분석, 지표 정의(시맨틱 레이어)가 환각을 줄인다, 경영 보고에는 사람 검토 단계를 둔다, 설명 가능성(SQL과 근거를 함께 표시), 데이터 거버넌스(개인정보·권한). LLM 보안 기준으로 OWASP Top 10 for LLM Applications를 쓴다(2025판 1위가 프롬프트 인젝션. 2026판 발행 보도가 있으니 최신판을 확인).
 - **미션**
   - 7-1 🎫 S1 SQL 티켓 44개 → 평가셋(JSONL)
   - 7-2 🎫 실행 정확도 채점기(S1 `compare_rows` 재사용, 정답끼리 비교하면 100%)
@@ -460,10 +494,12 @@ flowchart LR
   - 7-7 🎫 프롬프트 캐싱 효과 실측
   - 7-8 🎫 모델·effort 비교표(정확도·비용·지연) → 선택 근거 기록
   - 7-9 🎫 `/v1/ask`(인증·레이트리밋 포함)
+  - 7-10 ➕🎫🚀 Streamlit 데모 UI(15-6 경영진 데모용)
+  - 7-11 ➕🎫 MCP 서버로 읽기 전용 DB 조회 도구 연결(에이전트 도구의 권한 경계 실습)
   - 7-I1 🚨 프롬프트 인젝션으로 작업자 개인정보 요청
   - 7-B 🏁 오류 분석 리포트 → 개선 → EX 향상
 
-### 8장. CI/CD + 첫 배포 — 강태오 · 📐22h · 🎯 v0.1 공개(라이브 URL, CI 배지)
+### 8장. CI/CD + 첫 배포 — 강태오 · 📐24h · 🎯 v0.1 공개(라이브 URL, CI 배지, 업타임 감시·백업)
 
 - **개념**
   - 개념 구분: CI vs 지속적 전달 vs 지속적 배포
@@ -476,6 +512,7 @@ flowchart LR
   - DORA 지표: 배포 빈도, 변경 리드타임, 변경 실패율, 복구 시간.
   - 빨간 main이 최우선이다. shift-left.
   - 공급망 사고 사례: 2025년 3월 tj-actions/changed-files 침해(CVE-2025-30066)로 이 액션을 쓰던 리포들의 CI 로그에 시크릿이 노출됐다. 액션을 SHA로 고정하는 이유다.
+  - 시크릿이 필요한 잡에서 `pull_request_target`으로 외부 코드를 실행하지 않는다. LLM API 키는 보호 규칙이 걸린 environment에 둔다.
 - **사실**
   - ✅ 공개 리포는 표준 GitHub 호스티드 러너가 무료다(무료 할당 유지).
   - ✅ 2026-01-01부터 호스티드 러너 단가가 최대 39% 인하됐다.
@@ -484,38 +521,44 @@ flowchart LR
   - 8-1 🧠 워크플로 해부
   - 8-2 🎫 첫 CI(ruff + pytest)
   - 8-3 🎫 Postgres 서비스 컨테이너로 통합 테스트
-  - 8-4 🎫 캐시로 CI 시간 단축(이전 실행 대비 측정)
-  - 8-5 🎫 Newman과 Schemathesis를 CI에
+  - 8-4 ➕🎫 캐시로 CI 시간 단축(이전 실행 대비 측정)
+  - 8-5 🎫 Newman을 CI에(Schemathesis는 4-9를 했다면 ➕)
   - 8-6 🎫 required checks 연결
   - 8-7 🎫 이미지 빌드·스캔 → GHCR(sha 태그)
   - 8-8 🎫 permissions 최소화, SHA 고정, zizmor
   - 8-9 🎫 Dependabot PR 처리
-  - 8-10 🎫 VPS 준비(계정, SSH 키 전용 로그인, 방화벽, 자동 보안 업데이트)
+  - 8-10 🎫🔁 VPS 준비를 cloud-init으로 코드화(계정, SSH 키 전용 로그인, 방화벽, 자동 보안 업데이트. 1장 기술을 코드로)
   - 8-11 🎫 Compose + Caddy로 HTTPS 배포
   - 8-12 🎫 main 머지 → 자동 배포(environment 승인, `/version`으로 배포된 SHA 확인)
   - 8-13 🎫 LLM 평가 CI 게이트(라벨·경로 필터·야간 실행·비용 상한)
+  - 8-14 🎫 외부 업타임 체크(13장에서 앞당김: 운영 첫날부터 감시)
+  - 8-15 🎫🔁 운영 DB 백업 cron(pg_dump → VPS 밖 위치, 1·6장 연결)
+  - 8-16 ➕🎫🚀 AI 리뷰 보조 + AI PR 리뷰 체크리스트
+  - 8-17 ➕🎫 SBOM(syft)과 이미지 서명(cosign keyless)
   - 8-I1 🚨 빨간 main
   - 8-I2 🚨 exec format error(arm64 이미지를 amd64 서버에)
   - 8-I3 🚨 배포 후 500 → 롤백
   - 8-B 🏁 v0.1 공개(릴리스 노트, 배지, 라이브 URL)
 - **VPS 아키텍처**: amd64를 권장한다. 8-I2를 실제로 겪고 멀티아키 빌드의 필요성을 체감하기 위해서다. ARM VPS를 고르면 8-I2는 시뮬레이션으로 대체한다.
 
-### 9장. [AI-BI] dbt·데이터 품질 — 이미경·오정민·윤서진 · 📐12h · 🎯 dbt KPI 마트 + 테스트 + 문서 사이트
+### 9장. [AI-BI] dbt·데이터 모델링·BI — 이미경·오정민·윤서진 · 📐14h · 🎯 스타 스키마 KPI 마트 + 테스트 + Metabase 경영진 대시보드
 
-- **개념**: ELT, 분석 엔지니어링, dbt 구조(sources·models·seeds·tests·docs·macros), materialization, `ref()`와 DAG·리니지, generic/singular 테스트, freshness, 지표를 코드로 관리
+- **개념**: ELT, 분석 엔지니어링, dbt 구조(sources·models·seeds·tests·docs·macros), materialization, `ref()`와 DAG·리니지, generic/singular 테스트, freshness, 지표를 코드로 관리, 차원 모델링(팩트·디멘전, Kimball 스타 스키마)
 - **용법**: `dbt debug/run/test/build/docs generate`, `--select +model`, `state:modified`
-- **도메인**: KPI 정의서의 코드화, S1 6장 정합성 검증을 상시 테스트로 전환, 데이터 품질 SLA, 리니지 기반 영향도 분석
+- **도메인**: KPI 정의서의 코드화, S1 6장 정합성 검증을 상시 테스트로 전환, 데이터 품질 SLA, 리니지 기반 영향도 분석, OEE(종합설비효율 = 가동률 × 성능 × 품질, 제조업 표준 KPI)와 S1 지표의 관계, 관리도(SPC)로 공정 이상 판단
 - **미션**
   - 9-1 🧠 ELT와 분석 엔지니어링
   - 9-2 🎫 dbt 프로젝트와 소스
   - 9-3 🎫 staging 모델 + 이상 레코드 제외(S1 6-5 규칙)
-  - 9-4 🎫 KPI 마트(B-2 결과와 일치)
+  - 9-4 🎫 KPI 마트를 스타 스키마로(fct_production·dim_line·dim_product·dim_date, B-2 결과와 일치)
   - 9-5 🎫 테스트(S1 6-3·6-4를 singular test로, 알려진 데이터 이슈는 warn)
-  - 9-6 🎫 dbt docs → GitHub Pages
-  - 9-7 🎫 CI에서 변경된 모델만 빌드
+  - 9-6 ➕🎫 dbt docs → GitHub Pages
+  - 9-7 ➕🎫 CI에서 변경된 모델만 빌드
   - 9-8 🎫 API를 마트 기반으로 전환(골든 테스트 유지)
-  - 9-B 🏁 가동률 정의 v2 변경 요청: 리니지 확인 → 모델·API·테스트·문서를 한 PR로
-- **사이드 퀘스트**: Metabase를 마트에 연결(BI 도구 경험)
+  - 9-9 🎫 Metabase 경영진 대시보드(마트 연결, Compose로 실행)
+  - 9-10 ➕🎫 p 관리도(SPC)로 라인별 불량률 이상 판단(이미경 품질팀장 요청)
+  - 9-B 🏁 OEE 도입 요청(가동률 × 성능 × 품질. 성능은 S1 `products.std_shift_qty` 기준으로 KPI 정의서 v2에서 확정): 리니지 확인 → 모델·API·테스트·문서·대시보드를 한 PR로
+- **사이드 퀘스트(➕)**: Tableau Public(macOS 지원, 단 저장한 통합문서가 공개됨). Power BI Desktop은 macOS 버전이 없어 제외했다(웹의 Power BI Service는 보기·공유 위주).
 
 ### 10장. Kubernetes I (로컬 k3d) — 강태오 · 📐25h · 🎯 KPI 스택 매니페스트(로컬에서 재현 가능)
 
@@ -535,7 +578,7 @@ flowchart LR
   - 10-4 🔮 파드를 지우면?
   - 10-5 🎫 Service와 DNS
   - 10-6 🎫 ConfigMap·Secret 주입
-  - 10-7 🎫 Postgres StatefulSet과 PVC
+  - 10-7 🎫 Postgres StatefulSet과 PVC (중간 점검)
   - 10-8 🎫 probes
   - 10-9 🎫 requests/limits
   - 10-10 🎫 롤링 업데이트와 롤백
@@ -549,7 +592,7 @@ flowchart LR
   - 10-B 🏁 `kubectl apply -k` 한 번으로 전체 스택 재현
 - **사이드 퀘스트**: Killercoda 쿠버네티스 시나리오(무료)
 
-### 11장. Kubernetes II + GitOps — 강태오·서지훈 · 📐25h · 🎯 Helm 차트 + Argo CD + 보안 체크리스트 통과
+### 11장. Kubernetes II + GitOps — 강태오·서지훈 · 📐24h · 🎯 Helm 차트 + Argo CD + 보안 체크리스트 통과
 
 - **개념**
   - 외부 노출: Ingress와 컨트롤러(k3s 기본은 Traefik), Gateway API, cert-manager와 Issuer
@@ -568,13 +611,14 @@ flowchart LR
   - 11-2 🎫 cert-manager TLS(로컬 CA)
   - 11-3 🎫 Helm 차트(values-dev/prod)
   - 11-4 🎫 HPA와 k6로 스케일 아웃 관찰(p95 기록)
-  - 11-5 🎫 PDB
+  - 11-5 ➕🎫 PDB
   - 11-6 🎫 NetworkPolicy(api → db만 허용)
   - 11-7 🎫 전산팀 읽기 전용 RBAC
   - 11-8 🎫 securityContext와 restricted
   - 11-9 🎫 Git에 평문 Secret 0건
-  - 11-10 🎫 Argo CD Application
+  - 11-10 🎫 Argo CD Application (중간 점검)
   - 11-11 🎫 CI → 이미지 태그 갱신 → 자동 동기화
+  - 11-12 ➕🎫 Kyverno 정책(latest 태그 금지, limits 필수)
   - 11-I1 🚨 누군가 kubectl edit → drift → self-heal
   - 11-I2 🚨 잘못된 values → git revert로 롤백
   - 11-B 🏁 전산팀 보안 심사(10개 항목 자동 검증)
@@ -587,6 +631,7 @@ flowchart LR
 - **도메인**: 컷오버 계획서와 롤백 계획, 비용 vs 가용성 트레이드오프를 문서로 남기기, 폐쇄망 설치 시나리오(이미지·차트 반입 절차)
 - **리소스** 📐: 4GB급 노드를 권장한다. k3s, API, Postgres, Traefik, cert-manager, Argo CD에 모니터링 에이전트까지 올리면 2GB로는 부족할 가능성이 높다. Argo CD는 core 설치(UI 없음)나 Flux로 메모리를 줄일 수 있다.
 - **미션**
+  - 12-0 ➕🎫 Ansible로 VPS 구성 코드화(8-10 cloud-init의 확장, 재실행 시 변경 0 = 멱등성)
   - 12-1 🎫 Tailscale 사설 접근(6443 포트 외부 비공개)
   - 12-2 🎫 k3s 설치와 원격 컨텍스트
   - 12-3 🎫 Argo CD로 운영 동기화
@@ -596,11 +641,12 @@ flowchart LR
   - 12-7 🎫 백업 CronJob → 오브젝트 스토리지
   - 12-8 🎫 복구 드릴(새 네임스페이스)
   - 12-9 🎫 4GB 노드 리소스 예산
-  - 12-10 🎫 (선택) 에어갭 설치
+  - 12-10 ➕🎫 에어갭 설치
+  - 12-11 ➕🎫 k3s 마이너 버전 업그레이드와 롤백 계획
   - 12-I1 🚨 노드 디스크 압박 → eviction
   - 12-B 🏁 v0.5 운영 이전 보고
 
-### 13장. 관측성·SRE — 강태오·한상철 · 📐22h · 🎯 SLO 대시보드 + 알림 + 온콜 인증
+### 13장. 관측성·SRE — 강태오·한상철 · 📐19.5h · 🎯 SLO 대시보드 + 알림 + 온콜 인증
 
 - **개념**
   - 관측성 기초: 모니터링 vs 관측성, 메트릭·로그·트레이스
@@ -623,12 +669,12 @@ flowchart LR
   - 13-9 🎫 알림 라우팅(Discord/Slack, 선택: n8n)
   - 13-10 🎫 설비 진동 이상 알림 파이프라인
   - 13-11 🎫 LLM 관측 패널
-  - 13-12 🎫 외부 업타임 체크
   - 13-I1 🚨 지연 급증(인덱스 삭제 주입)
-  - 13-I2 🚨 카디널리티 폭발
+  - 13-I2 ➕🚨 카디널리티 폭발
+  - (v0.1의 13-12 외부 업타임 체크는 8-14로 옮겼다)
   - 13-B 🏁 온콜 인증(무작위 장애 2건 + 포스트모템)
 
-### 14장. AWS·Terraform (크레딧 단기 실습) — 강태오 · 📐22h · 🎯 Terraform DR 리허설 기록 + 과금 리소스 잔여 0
+### 14장. AWS·Terraform (크레딧 단기 실습) — 강태오 · 📐21h · 🎯 Terraform DR 리허설 기록 + 과금 리소스 잔여 0
 
 - **시작 조건**
   - AWS 계정은 **이 장 직전에 만든다.** ✅ 신규 계정 크레딧과 Free 플랜은 최대 6개월이다. Free 플랜이 끝나면 계정이 폐쇄되고 90일간 보관된다.
@@ -637,7 +683,7 @@ flowchart LR
 - **개념**
   - 클라우드 기초: 리전·AZ, 공유 책임 모델, 루트 계정 보호와 MFA
   - IAM: 사용자·역할·정책, 최소권한, 정책 평가 순서
-  - 네트워크와 서비스: VPC(서브넷·라우팅·IGW·NAT·보안 그룹), EC2, ECR, EKS(컨트롤 플레인·노드 그룹·애드온·Pod Identity), S3(수명주기)
+  - 네트워크와 서비스: CIDR·서브넷 계산, VPC(서브넷·라우팅·IGW·NAT·보안 그룹), EC2, ECR, EKS(컨트롤 플레인·노드 그룹·애드온·Pod Identity), S3(수명주기)
   - Terraform: provider·resource·data·variable·output, state와 원격 백엔드, 모듈, plan/apply/destroy, drift
   - OIDC로 장기 키 없이 CI에서 배포
 - **용법**: `aws sts get-caller-identity`, `aws budgets`, `terraform init/plan/apply/destroy`, `terraform state list`, `tflint`, `infracost breakdown`, `aws eks update-kubeconfig`
@@ -651,7 +697,7 @@ flowchart LR
   - 엣지(k3s) + 클라우드 하이브리드, DR(RPO/RTO)
 - **미션**
   - 14-0 🎫 계정 보안과 예산 알람
-  - 14-1 🧠 클라우드 개념과 비용 함정
+  - 14-1 🧠⌨️ 클라우드 개념·비용 함정 + CIDR 서브넷 계산 드릴
   - 14-2 🎫 Terraform 기초와 S3 원격 상태
   - 14-3 🎫 IAM 최소권한 정책
   - 14-4 🎫 GitHub Actions OIDC(장기 키 0개)
@@ -660,25 +706,26 @@ flowchart LR
   - 14-7 🎫 Infracost 비용 추정
   - 14-8 🎫 EKS 생성
   - 14-9 🎫 같은 Helm 차트로 EKS 배포
-  - 14-10 🎫 백업을 S3로 + 수명주기
+  - 14-10 ➕🎫 백업을 S3로 + 수명주기
   - 14-11 🎫 destroy와 과금 리소스 잔여 0 검증(필수)
   - 14-I1 🚨 콘솔에서 직접 수정 → drift → 코드로 정합
   - 14-B 🏁 DR 리허설(엣지 장애 가정 → EKS 재구성 → 복원 → destroy)
 
-### 15장. 최종 보스: Game Day + 전환 심사 2 — 정다은·오정민·강태오 · 📐15h · 🎯 v1.0.0 + 포트폴리오
+### 15장. 최종 보스: Game Day + 전환 심사 2 — 정다은·오정민·강태오 · 📐16.5h · 🎯 v1.0.0 + 포트폴리오
 
 - **미션**
   - 15-1 🎫🚀 아키텍처 문서(C4, Mermaid)와 ADR 5건
   - 15-2 🎫 런북(장애 5종)
-  - 15-3 🚨 Game Day(운영 환경, 미리 예약한 시간대, 무작위 장애 3건)
+  - 15-3 🚨 Game Day(운영 환경, 미리 예약한 시간대, 무작위 장애 3건. VPS 소실 후 코드로 재구성 포함)
   - 15-4 🎫 포스트모템 3건
   - 15-5 🎫 DORA 지표 리포트(내 리포의 GitHub API 데이터를 SQL/pandas로 분석, S1 역량 재사용)
   - 15-6 🎫 경영진 데모(Text-to-SQL 질의 5건 + KPI 대시보드)
-  - 15-7 🎫 v1.0.0 릴리스와 포트폴리오 README
+  - 15-7 🎫 v1.0.0 릴리스와 포트폴리오 README(EX%, p95, MTTR, 월 비용 같은 측정치 포함)
+  - 15-8 🧠 면접 드릴: ADR 기반 트레이드오프 질문 20문항(왜 Compose 먼저? 왜 k3s? 비용은?)
   - 15-B 🏁 전환 심사 2(모든 체크 green + 🔒 종합 퀴즈 30문항)
 - **엔딩 훅(S3 후보)**: 센서 스트리밍 실시간 이상 탐지, MLOps
 
-미션 수는 장별로 7·16·12·13·11·13·14·11·17·9·18·14·12·15·14·8개, **합계 204개**다.
+미션 수는 장별로 7·14·13·15·12·13·14·13·21·11·18·15·14·14·14·9개, **합계 217개**(코어 197, ➕선택 20)다.
 
 ---
 
@@ -811,6 +858,10 @@ class Mission:
     rca: Quiz | None = None        # incident 전용
     requires: list[str] = ()       # 선수 미션 (장 DAG)
     est_min: int = 30              # 실측과 비교
+    track: Literal["core", "elective"] = "core"                                # v0.2
+    scaffold: Literal["worked", "completion", "independent"] = "independent"   # v0.2
+    spiral: list[int] = ()         # v0.2: 다시 쓰는 앞 장 번호
+    ask_confidence: bool = False   # v0.2: 답과 함께 확신도(1~3) 입력
 ```
 
 ### 6.4 체크 프리미티브 카탈로그
@@ -828,9 +879,11 @@ class Mission:
 | k8s | get, deployment_ready, has_probes, has_resources, cronjob_tz, job_succeeded, endpoints, can_i, no_diff | `kubectl -o json` |
 | argocd | app_synced_healthy | `argocd app get -o json` |
 | postgres | query_equals(golden), privileges, uses_index(EXPLAIN JSON) | psycopg |
-| tools | pytest(min_tests, cov), newman(min_assertions), schemathesis, hadolint, trivy, dbt(run_results.json), k6(summary.json), actionlint, zizmor, gitleaks | 각 도구의 JSON 리포트 |
+| tools | pytest(min_tests, cov), newman(min_assertions), schemathesis, hadolint, trivy, dbt(run_results.json), k6(summary.json), actionlint, zizmor, gitleaks, mutmut, syft, cosign verify | 각 도구의 JSON 리포트 |
 | aws | identity_not_root, mfa_enabled, budgets_exist, no_billable_leftovers(region), oidc_provider | `aws … --output json` |
 | eval | report(min_ex, max_cost) | 평가 JSON |
+| bi (v0.2) | metabase_dashboard_exists, card_query_equals(golden) | Metabase API |
+| ansible (v0.2) | idempotent(두 번째 실행에서 changed=0) | `ansible-playbook` JSON 콜백 |
 
 ### 6.5 장애 주입 안전 원칙
 
@@ -889,6 +942,7 @@ brew "hashicorp/tap/terraform"; brew "tflint"; brew "awscli"; brew "infracost"
 # 품질·보안
 brew "actionlint"; brew "gitleaks"; brew "pre-commit"; brew "libpq"
 # Brew 밖에서 설치: uv tool install zizmor schemathesis dbt-postgres · npm i -g newman
+# 선택(➕) 미션용: brew "ansible"; brew "syft"; brew "cosign"; brew "kyverno" · Metabase는 Docker 이미지 · uv add streamlit mutmut
 ```
 
 설치 후 `quest doctor`로 버전을 검사한다. 미션마다 허용 버전 범위를 명시한다.
@@ -898,10 +952,10 @@ OrbStack은 ✅ 개인·비상업 용도만 무료다(상업 용도는 사용자
 
 | 항목 | 시작 | 예상 | 근거·비고 |
 |---|---|---|---|
-| VPS 4GB급(amd64 권장) | 8장(W7~8 무렵) | 월 1~2만 원 범위에서 선택 📐 | ⚠️ Hetzner는 2026년에 두 차례 인상됐고 일부 요금제가 주문 불가라는 보도가 있음 → 구매 시점에 비교 |
+| VPS 4GB급(amd64 권장) | 8장(W8~9 무렵) | 월 1~2만 원 범위에서 선택 📐 | ⚠️ Hetzner는 2026년에 두 차례 인상됐고 일부 요금제가 주문 불가라는 보도가 있음 → 구매 시점에 비교 |
 | 도메인 | 8장 | 선택(무료 대안: DuckDNS 서브도메인) | — |
 | 백업 저장소 | 12장 | S3 호환 무료 구간(R2·B2 등, 조건 확인) | 14장에서 S3로 이관 |
-| AWS | 14장(W13~14 무렵) | 신규 크레딧 범위 | 크레딧 최대 $200로 보도됨(AWS 공지는 가입 $100 + 활동 $100) |
+| AWS | 14장(W16 무렵) | 신규 크레딧 범위 | 크레딧 최대 $200로 보도됨(AWS 공지는 가입 $100 + 활동 $100) |
 | EKS 실습 | 14장 | 시간당 약 $0.3~0.5 📐(컨트롤 플레인 $0.10 + 소형 노드 + LB + IPv4). 4시간 × 10회 ≈ $12~20 | Infracost로 실측 |
 | LLM API | 7장부터 | 7.4절 | Anthropic 단가 |
 | GitHub(Actions·GHCR·Pages) | 2장부터 | 공개 리포 기준 무료 | ✅ |
@@ -950,14 +1004,18 @@ OrbStack은 ✅ 개인·비상업 용도만 무료다(상업 용도는 사용자
 |---|---|---|---|
 | M0 | W0 | 엔진 재구성(패키지·uv·SQLite 상태), S1 회귀 테스트 | S1 52개 미션의 모범 답안이 모두 통과하고 trap이 감지됨 |
 | M1 | W1 시작 전 | ops·quiz·predict·drill 엔진, 체크(fs·shell·ssh·git·github·http), 복습 스케줄러, `doctor`, Linux 랩, 0~2장 콘텐츠 | 0~2장을 맥에서 처음부터 끝까지 플레이 가능 |
-| M2 | 3장 도달(W2~3)부터 한 장씩 | docker·postgres 체크, incident 엔진, 3~7장 | 장마다 픽스처 테스트 통과 |
-| M3 | 8장 도달(W7)부터 한 장씩 | k8s·argocd·aws 체크, 8~12장 | 〃 |
-| M4 | 13장 도달(W12)부터 한 장씩 | 13~15장, 온콜 모드, `stats` | 〃 |
+| M2 | 3장 도달(W3)부터 한 장씩 | docker·postgres 체크, incident 엔진, 3~7장 | 장마다 픽스처 테스트 통과 |
+| M3 | 8장 도달(W8)부터 한 장씩 | k8s·argocd·aws·bi 체크, 8~12장 | 〃 |
+| M4 | 13장 도달(W15)부터 한 장씩 | 13~15장, 온콜 모드, `stats`, 지연 퀴즈 | 〃 |
 
 - **콘텐츠는 학습자보다 한 장 앞서서만 만든다.** 장마다 텔레메트리(예상 vs 실측, 힌트 사용률)를 보고 다음 장을 조정한다. 200개를 한꺼번에 만드는 방식은 제작 비용이 크고 피드백을 반영하지 못한다.
 - **제작 분담(권장)**
   - 엔진: 직접 바이브코딩해도 된다. Python, 테스트, CI 실습이 된다.
   - 콘텐츠(정답·체커·장애 시나리오): AI가 만들고 학습자는 읽지 않는다.
+- **제작 우선순위(v0.2)**
+  - 코어 미션을 먼저 만들고, ➕선택 미션은 학습자가 열겠다고 할 때만 만든다.
+  - 퀴즈·드릴은 템플릿으로 생성하고 사람이 검수한다.
+  - 외부 무료 실습(Bandit, SadServers, Killercoda, Learn Git Branching)으로 대체할 수 있는 일반 연습은 직접 만들지 않는다. 링크와 확인 퀴즈로 연결한다.
 
 ---
 
@@ -973,7 +1031,11 @@ OrbStack은 ✅ 개인·비상업 용도만 무료다(상업 용도는 사용자
 | CI 보안 | zizmor, actionlint, gitleaks | 워크플로 정적 분석, 시크릿 유출 차단 |
 | 부하·관측 | k6, Uptime Kuma | p95·SLO 검증, 셀프호스트 업타임 모니터 |
 | IaC 비용 | Infracost | 실행 전에 비용을 숫자로 확인 |
-| BI | Metabase | dbt 마트 위에 BI 도구 경험 |
+| BI | Metabase(코어), Tableau Public(➕) | 오픈소스라 스택 안에 배포 가능. Power BI Desktop은 macOS 버전이 없음 |
+| 테스트 품질 | mutmut(➕) | AI가 쓴 테스트가 실제로 버그를 잡는지 변이로 측정 |
+| 구성 관리 | Ansible(➕) | VPS 구성을 코드로, 재실행해도 결과가 같은지(멱등성) 확인 |
+| 공급망 | syft, cosign(➕) | SBOM 생성, 키 없는 이미지 서명 |
+| 데모 UI | Streamlit(➕) | Text-to-SQL 시연 화면 |
 | 로드맵 참고 | roadmap.sh DevOps / Backend | 빠진 주제 점검용 |
 
 ---
@@ -982,15 +1044,17 @@ OrbStack은 ✅ 개인·비상업 용도만 무료다(상업 용도는 사용자
 
 | 리스크 | 영향 | 대응 |
 |---|---|---|
-| 콘텐츠 제작량(약 200 미션) | 일정 지연, 품질 편차 | 한 장씩 만들기, 픽스처 테스트 의무화, 텔레메트리로 범위 축소 |
+| 콘텐츠 제작량(217개, 코어 197) | 일정 지연, 품질 편차 | 코어 우선·선택은 요청 시 제작, 템플릿 퀴즈, 외부 실습 연결, 픽스처 테스트 의무화 |
+| 일정 낙관 편향 | S1은 계획 대비 50~63% 진행. v0.1은 시간 합계를 잘못 적음(310h → 294h) | 버퍼 주 3개, 보수 일정 병기, 1·2장 실측 후 재계산, 숫자 검산 |
 | 도구 버전 변화 | 미션 깨짐 | Brewfile·버전 범위 고정, `doctor` 검사 |
 | 맥 특유 이슈 | arm64 이미지 문제, BSD 도구 차이 | Linux는 VM에서, 멀티아키 빌드는 정식 미션으로 |
-| AI 과의존 | 숙련 형성 저하(1.3절) | 태그, 설명 게이트, 🔒 장애·드릴. 강제 수단은 없으므로 자율 준수 |
+| AI 과의존 | 숙련 형성 저하(1.3절) | 태그, 설명 게이트, 🔒 장애·드릴, 위임은 손으로 1회 한 뒤에만. 강제 수단은 없으므로 자율 준수 |
 | 클라우드 비용 사고 | 크레딧 초과 | 7.3절 가드레일, 14-11 필수 |
 | 요금·플랜 변동 | 비용 표가 틀어짐 | 표의 출처와 날짜를 남기고, 사용 시점에 재확인 |
 | 단일 노드 VPS | 장애 = 다운타임 | 학습 범위에서는 수용하고, 12-5 계획서에 명시 |
 | 실제 회사명 사용 | 공개 포트폴리오에서 소속처럼 오해될 소지 | 프로젝트 리포는 가상 고객사명만 사용하고, README에 가상 설정·AI 제작 도구임을 고지(2-2 체크 항목) |
 | 세일링스톤 공고 요구사항 미확인 | 비중 배분이 공고와 어긋날 수 있음 | 공고 원문을 받으면 장 비중 재조정 |
+| AI-BI 비중 | AI-BI 전용 코어 시간은 약 15% 📐 | 공고 원문 확보 후 재배분(11절 1번) |
 
 ---
 
@@ -1023,3 +1087,115 @@ OrbStack은 ✅ 개인·비상업 용도만 무료다(상업 용도는 사용자
 - CKAD 가격: https://www.linuxfoundation.org/ja-jp/news/new-certification-pricing-takes-effect-feb-4 · https://www.sailor.sh/blog/ckad-certification-cost
 - Claude 가격·캐시 규칙: https://platform.claude.com/docs/en/about-claude/pricing · https://platform.claude.com/docs/en/build-with-claude/prompt-caching
 - 학습 과학: Dunlosky et al.(2013) *Psychological Science in the Public Interest* 14(1), 4–58 · Roediger & Karpicke(2006) *Psychological Science* 17(3), 249–255
+- 학습 과학(v0.2 추가): Sweller & Cooper(1985) *Cognition and Instruction* 2(1), 59–89 · Renkl & Atkinson(2003) *Educational Psychologist* 38(1), 15–22
+- METR, Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity(2025-07-10) 보도: https://www.infoworld.com/article/4020931/ai-coding-tools-can-slow-down-seasoned-developers-by-19.html
+- Power BI Desktop의 macOS 미지원: https://www.parallels.com/apps/power-bi/ · https://community.fabric.microsoft.com/t5/Desktop/Download-Power-BI-on-Mac/m-p/369182
+- OWASP Top 10 for LLM Applications(정리): https://docs.modulos.ai/frameworks/owasp-top-10-llm · 공식 사이트: https://genai.owasp.org/
+
+---
+
+## 부록 A. 설계 리뷰 기록 (v0.1 → v0.2, 2026-11-08)
+
+관점이 다른 페르소나 7명이 v0.1을 검토했다. 발언 중 근거가 있는 주장과 근거 데이터가 없는 주장은 구분해서 적었다(근거 데이터가 없는 것은 "의견"으로 표시).
+
+### A.1 참여 페르소나
+
+| 페르소나 | 관점 | 주로 본 것 |
+|---|---|---|
+| P1 학습설계 전문가 | 인지 부하, 인출 연습, 평가 타당도 | 난이도 곡선, 측정 방식 |
+| P2 교육용 게임 디자이너 | 동기, 리텐션, 보상 루프 | 첫 경험, 장 길이, 보상 |
+| P3 시니어 DevOps/SRE(제조 IT 경험) | 운영 현실성 | 배포·감시·백업 순서, IaC |
+| P4 AI-BI 팀장(채용 결정권자) | 직무 적합성, 포트폴리오 | BI 도구, 모델링, 제조 KPI |
+| P5 보안 엔지니어 | 공급망, LLM 보안 | CI, 이미지, Text-to-SQL |
+| P6 학습자 대리(부트캠프 바이브코더, 주 20시간) | 실행 가능성, 체감 | 초반 부담, AI 활용, 일정 변동 |
+| P7 회의론자 PM | 범위, 제작비, 일정 리스크 | 숫자 검증, 우선순위 |
+
+### A.2 1라운드: 문제 제기
+
+- **P1 학습설계**
+  - 새 도구를 처음부터 독립 과제로 주면 초보자의 인지 부하가 크다. 풀이 예시 효과(Sweller & Cooper 1985)와 점진적 제거(Renkl & Atkinson 2003)를 적용해야 한다.
+  - XP와 진행률은 완료를 잴 뿐 학습을 재지 않는다. 기억 유지율을 따로 측정해야 한다.
+  - 주제별 블록 구성이라 1장 Linux를 다시 쓰는 시점(8장 VPS)까지 약 6주가 빈다. 앞 장 기술을 다시 쓰는 미션이 필요하다(Dunlosky 2013: 교차 연습은 moderate utility).
+  - 복습 알고리즘은 Leitner보다 FSRS가 낫다(의견).
+- **P2 게임 디자인**
+  - 첫 6시간이 설치 작업이라 목적지가 보이지 않는다. 완성품 미리보기가 필요하다.
+  - 25시간짜리 장(1·10·11장)에 중간 절정이 없다.
+  - 연속 복습 일수가 끊기면 오히려 이탈을 부를 수 있다.
+  - 리더보드 같은 사회적 비교와 LLM으로 채점하는 서술형 피드백이 있으면 좋겠다(의견).
+- **P3 DevOps/SRE**
+  - 8장에서 운영을 시작하는데 업타임 감시는 13장, 백업은 12장이다. 5주 가까이 감시·백업 없이 운영하는 셈이고, 실무 원칙과 반대다.
+  - 1장에서 "서버는 가축"이라고 가르치면서 VPS는 손으로 설정한다. VPS 구성도 코드여야 한다.
+  - 14장 VPC 설계 전에 CIDR·서브넷 계산을 다루지 않는다.
+  - 운영 클러스터 업그레이드 경험이 필요하다. 3노드 HA와 Jenkins·GitLab CI 경험도 있으면 좋다(뒤의 둘은 의견).
+- **P4 AI-BI 팀장**
+  - 경영진 대시보드를 Grafana로 만들면 BI 채용 담당자에게 BI 결과물로 읽히기 어렵다(의견). BI 도구로 만든 결과물이 필요하다.
+  - 차원 모델링(스타 스키마)이 없다.
+  - S1 데이터에 `products.std_shift_qty`가 있어서 제조업 표준 지표인 OEE(가동률 × 성능 × 품질)를 계산할 수 있는데 쓰지 않는다.
+  - AI-BI 전용 코어 시간이 약 15%(📐)다. AI-BI 인턴이 목표라면 낮다.
+  - Power BI나 Tableau 경험이 있으면 좋다(의견).
+- **P5 보안**
+  - SBOM과 이미지 서명이 없다.
+  - `pull_request_target` 위험, LLM 키 보호, GitHub secret scanning이 빠져 있다.
+  - Text-to-SQL 보안 기준이 임의적이다. OWASP Top 10 for LLM Applications를 기준으로 삼아야 한다.
+  - 작업자 이름이 개인정보라는 법적 맥락이 빠져 있다.
+- **P6 학습자 대리**
+  - 부트캠프는 바이브코딩을 가르치는데 설계는 AI를 주로 막는다. 실무에 필요한 "AI에게 일을 맡기고 검증하는 능력"을 훈련하는 미션이 없다.
+  - API를 하나 만들기 전에 Linux만 25시간이다. 배운 Linux를 써먹는 장면도 늦게 나온다.
+  - 부트캠프 과제가 몰리는 주가 있는데, 일정에 여유가 없다.
+- **P7 회의론자 PM**
+  - v0.1 미션 204개를 만들고 검증하는 비용이 크다. 여기에 더 얹으면 제작이 학습 속도를 못 따라간다.
+  - S1은 11/8까지 52티켓 완료가 계획이었지만 실제로는 4장 진행 중(26~33개, 50~63%)이다. 15주 계획은 낙관적일 가능성이 높다.
+  - v0.1은 시간 합계를 310h로 잘못 적었다가 294h로 고쳤다. 추정치를 검산 없이 믿으면 안 된다.
+  - 14장 AWS는 21시간이 들고 비용 리스크도 있다. 빼면 일정이 준다.
+
+### A.3 2라운드: 충돌과 조정
+
+1. **P2(완성품 미리보기) vs P7(제작 순서·정답 노출)**: 미리보기용 완성품은 M4가 끝나야 존재하고, 보여 주면 정답을 노출하게 된다. → **수정 채택**: 완성품 대신 `quest goals`(졸업 기준 충족 현황)와 아키텍처 지도를 첫날부터 보여 준다.
+2. **P6(AI 활용 훈련) vs P1(Anthropic RCT에서 AI 위임 패턴의 퀴즈 점수는 24~39%)**: → **조건부 채택**: 🚀 위임 미션은 같은 기술을 손으로 1회 이상 해 본 뒤에만 연다. 위임 결과는 계약 테스트·변이 테스트·설명 게이트로 검증한다. 장애·드릴의 🔒는 유지한다.
+3. **P3(깊이 추가) vs P7(범위)**: cloud-init 코드화는 추가 비용이 거의 없어 코어로 채택한다. Ansible과 k3s 업그레이드는 선택이다. 3노드 HA는 VPS 비용이 3배라 기각한다. Jenkins·GitLab CI는 근거 데이터가 없고 Actions 개념이 그대로 전이되므로 기각한다.
+4. **P4(AI-BI 비중) vs P6(요청한 도구 목록은 인프라 중심이고, SQL·Python은 S1에서 다룸)**: 코어에는 스타 스키마·OEE·Metabase만 추가하고(9장 +2시간), SPC는 선택으로 둔다. 최종 비중은 공고 원문을 확보한 뒤 다시 정한다.
+5. **P4(Power BI/Tableau) vs 환경 사실**: Power BI Desktop은 macOS 버전이 없다 ✅. → Power BI는 기각한다. Metabase(오픈소스, 스택 안에 배포 가능)를 코어로 하고 Tableau Public은 선택으로 둔다(저장물이 공개됨).
+6. **P7(전체 축소) vs 나머지(추가 요구)**: 코어/선택 구분을 도입하고, 가치 대비 비용이 낮은 기존 미션 11개를 선택으로 내렸다. 결과적으로 코어는 292시간으로 v0.1(294시간)과 같은 수준이고, 선택 미션 33시간이 따로 생겼다. 일정에는 버퍼 주 3개를 넣고 보수 일정을 함께 적었다.
+7. **P7(AWS 삭제) vs 목표(DevOps/클라우드)**: 기각한다. 목표에 퍼블릭 클라우드가 포함되고, 비용은 크레딧 범위 안이다.
+8. **P2(LLM 서술형 채점) vs P1·P7**: 결과가 비결정적이고 비용이 들어서 기각한다. 결정적으로 채점되는 퀴즈를 먼저 운영한다.
+
+### A.4 결정표
+
+| # | 제안 | 제안자 | 결정 | 반영 위치 |
+|---|---|---|---|---|
+| 1 | 코어/선택 구분 | P7 | 채택 | 0절, 3.4, 4장 |
+| 2 | 버퍼 주 3개, 보수 일정 병기 | P6·P7 | 채택 | 0절, 3.8, 4.1 |
+| 3 | 네트워크 기초를 3장으로 이동 | P6·P1 | 채택 | 1장, 3장 |
+| 4 | 3장에서 hg-edge-01에 첫 배포 | P6·P1 | 채택 | 3-13 |
+| 5 | 🔁 연결 미션 | P1 | 채택 | 3.4, 각 장 |
+| 6 | 스캐폴딩 3단계 | P1 | 채택 | 3.4, 6.3 |
+| 7 | 지연 퀴즈, 확신도 평정 | P1 | 채택 | 3.7 |
+| 8 | FSRS 즉시 도입 | P1 | 보류(데이터 축적 후) | 3.7 |
+| 9 | 완성품 미리보기 | P2 | 수정 채택(`quest goals`) | 3.2 |
+| 10 | 중간 점검(미니보스) | P2 | 채택(기존 미션에 표시) | 1·10·11장 |
+| 11 | 연속일 휴식권 | P2 | 채택 | 3.6 |
+| 12 | 리더보드 | P2 | 기각(학습자 1명) | — |
+| 13 | LLM 서술형 채점 | P2 | 기각(비결정적, 비용) | — |
+| 14 | 운영 첫날부터 업타임 감시·백업 | P3 | 채택 | 8-14, 8-15 |
+| 15 | VPS 구성 코드화: cloud-init / Ansible | P3 | 채택 / ➕ | 8-10, 12-0 |
+| 16 | CIDR 드릴 | P3 | 채택 | 14-1 |
+| 17 | k3s 업그레이드 | P3 | ➕ | 12-11 |
+| 18 | 3노드 HA | P3 | 기각(비용 3배) | — |
+| 19 | Jenkins·GitLab CI | P3 | 기각(근거 없음, 개념 전이) | — |
+| 20 | 스타 스키마·OEE·Metabase | P4 | 채택 | 9장 |
+| 21 | SPC 관리도 | P4 | ➕ | 9-10 |
+| 22 | Power BI | P4 | 기각(macOS 미지원) | — |
+| 23 | 면접 드릴 | P4 | 채택 | 15-8 |
+| 24 | SBOM·cosign / Kyverno | P5 | ➕ | 8-17, 11-12 |
+| 25 | secret scanning, `pull_request_target`, LLM 키 보호 | P5 | 채택 | 2-8, 8장 |
+| 26 | OWASP LLM Top 10 기준 | P5 | 채택 | 7장 |
+| 27 | 개인정보보호법 맥락 | P5 | 채택 | 6-8 |
+| 28 | AI 증강 개발 트랙 | P6 | 조건부 채택(손으로 1회 후 위임) | 3.5, 2-9, 3-14, 4-10, 7-11, 8-16 |
+| 29 | AWS 장 삭제 | P7 | 기각(목표에 클라우드 포함) | — |
+| 30 | 일반 연습은 외부 무료 실습으로 대체 | P7 | 채택 | 8절 |
+
+### A.5 남은 이견
+
+- **AI-BI 비중(P4)**: 공고 원문 없이는 결론을 낼 수 없다(11절 1번).
+- **일정(P7)**: 계획(18주)과 보수 일정(작업 24~30주) 중 어느 쪽이 맞는지는 1·2장 실측으로만 판단할 수 있다.
+- **"Grafana 대시보드는 BI 결과물로 읽히지 않는다"(P4)**: 근거 데이터가 없는 의견이다. Metabase 추가는 비용이 작아서 채택했다.
